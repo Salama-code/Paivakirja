@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v2</title>
+    <title>Oranssi Äänipäiväkirja PRO v3</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -30,6 +30,11 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            transition: background-color 0.1s;
+        }
+
+        body.flash {
+            background-color: #ff6600;
         }
 
         .container {
@@ -200,7 +205,7 @@
 
     <div class="container">
         <header>
-            <h1>Oranssi Äänipäiväkirja PRO v2</h1>
+            <h1>Oranssi Äänipäiväkirja PRO v3</h1>
         </header>
 
         <div class="record-zone" id="recordZone">
@@ -224,60 +229,21 @@
         function siivoaTeksti(teksti) {
             if (!teksti) return "";
             let puhdistettu = teksti;
-            
             täytesanat.forEach(sana => {
                 const regex = new RegExp(`(^|\\s)${sana}(\\s|$)`, 'gi');
                 puhdistettu = puhdistettu.replace(regex, ' ');
             });
-
             puhdistettu = puhdistettu.replace(/\s+/g, ' ').trim();
             if (puhdistettu.length > 0) {
-                puhadd = puhdistettu.charAt(0).toUpperCase() + puhdistettu.slice(1);
+                puhdistettu = puhdistettu.charAt(0).toUpperCase() + puhdistettu.slice(1);
             }
             return puhdistettu;
         }
 
-        let isSpeaking = false;
-        let recognition = null;
-        let isRecording = false;
-        let lockRestart = false;
-
-        function sano(teksti, callback) {
-            if ('speechSynthesis' in window) {
-                isSpeaking = true;
-                
-                if (recognition && isRecording) {
-                    try { recognition.abort(); } catch(e) {}
-                }
-
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(teksti);
-                utterance.lang = 'fi-FI';
-                utterance.rate = 1.1;
-
-                utterance.onend = () => {
-                    isSpeaking = false;
-                    if (isRecording && recognition) {
-                        setTimeout(() => {
-                            if (isRecording && !isSpeaking) {
-                                try { recognition.start(); } catch(e) {}
-                            }
-                        }, 300);
-                    }
-                    if (callback) callback();
-                };
-
-                utterance.onerror = () => {
-                    isSpeaking = false;
-                    if (isRecording && recognition) {
-                        try { recognition.start(); } catch(e) {}
-                    }
-                };
-
-                window.speechSynthesis.speak(utterance);
-            } else {
-                if (callback) callback();
-            }
+        // Oranssi välähdys äänikuittauksen sijaan — ei luuppia, ei katkaisua
+        function väläytäRuutu() {
+            document.body.classList.add('flash');
+            setTimeout(() => document.body.classList.remove('flash'), 200);
         }
 
         let wakeLock = null;
@@ -298,18 +264,19 @@
         const micIcon = document.getElementById('micIcon');
         const btnText = document.getElementById('btnText');
 
+        let recognition = null;
+        let isRecording = false;
+        let lockRestart = false;
+        let restartTimer = null;
+
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            recognition.continuous = true; 
-            recognition.interimResults = true; 
+            recognition.continuous = true;
+            recognition.interimResults = true;
             recognition.lang = 'fi-FI';
 
             recognition.onstart = () => {
-                if (isSpeaking) {
-                    try { recognition.abort(); } catch(e) {}
-                    return;
-                }
                 isRecording = true;
                 lockRestart = false;
                 recordBtn.classList.add('recording');
@@ -324,24 +291,30 @@
                 console.error("Tunnistusvirhe:", event.error);
                 if (event.error === 'not-allowed') {
                     statusText.innerText = "Mikrofoni estetty. Anna lupa.";
-                    lockRestart = true; 
+                    lockRestart = true;
                 }
+                // Muut virheet (network, no-speech) — yritetään uudelleen
             };
 
             recognition.onend = () => {
-                if (isRecording && !lockRestart && !isSpeaking) {
-                    setTimeout(() => {
-                        if (isRecording && !lockRestart && !isSpeaking) {
+                if (isRecording && !lockRestart) {
+                    // Pidempi viive sallii tauot puheessa ennen uudelleenkäynnistystä
+                    restartTimer = setTimeout(() => {
+                        if (isRecording && !lockRestart) {
                             try { recognition.start(); } catch(e) {}
                         }
-                    }, 400);
+                    }, 1500); // 1.5 sekunnin tauko sallittu
                 } else if (!isRecording) {
                     stopRecordingUI();
                 }
             };
 
             recognition.onresult = (event) => {
-                if (isSpeaking) return;
+                // Jos tulos tulee, ollaan vielä aktiivisia — peruutetaan mahdollinen restart-timer
+                if (restartTimer) {
+                    clearTimeout(restartTimer);
+                    restartTimer = null;
+                }
 
                 let interimTranscript = '';
                 let finalTranscript = '';
@@ -363,7 +336,7 @@
                     if (siivottuOsa.length > 0) {
                         tallennaMuistiin(siivottuOsa);
                         livePreview.innerText = "";
-                        sano("Tallennettu"); 
+                        väläytäRuutu(); // Hiljainen visuaalinen kuittaus
                     }
                 }
             };
@@ -372,9 +345,11 @@
                 pyydäWakeLock();
                 statusText.innerText = "Käynnistetään automaattisesti...";
                 setTimeout(() => {
-                    isRecording = true;
-                    sano("Kuuntelen");
-                }, 1500); 
+                    try {
+                        isRecording = true;
+                        recognition.start();
+                    } catch(e) {}
+                }, 1500);
             });
 
         } else {
@@ -383,19 +358,19 @@
         }
 
         recordBtn.addEventListener('click', muutaTilaa);
-        
+
         function muutaTilaa() {
             if (!recognition) return;
             if (isRecording) {
                 isRecording = false;
+                clearTimeout(restartTimer);
                 try { recognition.stop(); } catch(e) {}
-                sano("Lopetettu");
                 stopRecordingUI();
             } else {
                 lockRestart = false;
                 isRecording = true;
                 pyydäWakeLock();
-                sano("Kuuntelen");
+                try { recognition.start(); } catch(e) {}
             }
         }
 
@@ -417,13 +392,11 @@
         function tallennaMuistiin(uusiTeksti) {
             const pvm = haeTämänPäivänPäivämäärä();
             let kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-            
             if (kaikkiMerkinnät[pvm]) {
                 kaikkiMerkinnät[pvm] = kaikkiMerkinnät[pvm].trim() + " " + uusiTeksti;
             } else {
                 kaikkiMerkinnät[pvm] = uusiTeksti;
             }
-            
             localStorage.setItem('aanipaivakirja', JSON.stringify(kaikkiMerkinnät));
             paivitaLista();
         }
@@ -434,14 +407,12 @@
                 delete kaikkiMerkinnät[pvm];
                 localStorage.setItem('aanipaivakirja', JSON.stringify(kaikkiMerkinnät));
                 paivitaLista();
-                sano("Poistettu");
             }
         }
 
         function paivitaLista() {
             const container = document.getElementById('entriesContainer');
             container.innerHTML = '';
-            
             const kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
             const päivät = Object.keys(kaikkiMerkinnät).reverse();
 
@@ -454,7 +425,6 @@
                 const teksti = kaikkiMerkinnät[pvm];
                 const card = document.createElement('div');
                 card.className = 'entry-card';
-                
                 card.innerHTML = `
                     <div class="entry-header">
                         <span class="entry-date">${pvm}</span>
