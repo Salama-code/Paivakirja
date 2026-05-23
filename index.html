@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v9</title>
+    <title>Oranssi Äänipäiväkirja PRO v10</title>
     <style>
         :root {
             --bg-color: #121212; --surface-color: #1e1e1e;
@@ -39,7 +39,7 @@
 </head>
 <body>
 <div class="container">
-    <header><h1>Oranssi Äänipäiväkirja PRO v9</h1></header>
+    <header><h1>Oranssi Äänipäiväkirja PRO v10</h1></header>
     <div class="record-zone" id="recordZone">
         <button class="record-btn" id="recordBtn">
             <span class="mic-icon" id="micIcon">🎙️</span>
@@ -53,6 +53,7 @@
         <div id="entriesContainer"></div>
     </div>
 </div>
+
 <script>
     const täytesanat = ["ööö", "öö", "ää", "niinku", "tuota", "totta", "silleen", "sit", "sitku"];
 
@@ -65,16 +66,24 @@
         return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
     }
 
-    function leikkaaToisto(uusi, edellinen) {
-        if (!edellinen || !uusi) return uusi;
-        const uusiSanat = uusi.trim().toLowerCase().split(/\s+/);
-        const edellinenSanat = edellinen.trim().toLowerCase().split(/\s+/);
-        for (let pituus = Math.min(uusiSanat.length - 1, edellinenSanat.length); pituus >= 1; pituus--) {
-            const edellinenLoppu = edellinenSanat.slice(-pituus).join(' ');
-            const uusiAlku = uusiSanat.slice(0, pituus).join(' ');
-            if (edellinenLoppu === uusiAlku) {
-                const alkuperaisetSanat = uusi.trim().split(/\s+/);
-                return alkuperaisetSanat.slice(pituus).join(' ');
+    // Palauttaa vain sen osan uudesta tekstistä joka ei ole jo tallennetussa
+    function vainUusiOsa(uusi, tallennettu) {
+        if (!tallennettu || !uusi) return uusi;
+        const u = uusi.trim().toLowerCase();
+        const t = tallennettu.trim().toLowerCase();
+        
+        // Jos uusi teksti on kokonaan jo tallennetussa, ei mitään lisättävää
+        if (t.includes(u)) return "";
+
+        // Etsitään pisin loppupätkä tallennetusta joka löytyy uuden alusta
+        const tSanat = t.split(/\s+/);
+        const uSanat = uusi.trim().split(/\s+/);
+        
+        for (let pituus = Math.min(tSanat.length, uSanat.length - 1); pituus >= 1; pituus--) {
+            const tLoppu = tSanat.slice(-pituus).join(' ');
+            const uAlku = uSanat.slice(0, pituus).join(' ').toLowerCase();
+            if (tLoppu === uAlku) {
+                return uSanat.slice(pituus).join(' ');
             }
         }
         return uusi;
@@ -102,11 +111,15 @@
     let isRecording = false;
     let lockRestart = false;
     let restartTimer = null;
-    let edellinenPätkä = "";
 
     function haePvm() {
         const d = new Date();
         return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+    }
+
+    function haeTallennettu() {
+        const kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+        return (kaikki[haePvm()] || "").toLowerCase();
     }
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -155,13 +168,14 @@
                 else interim += event.results[i][0].transcript;
             }
             if (interim) livePreview.innerText = interim;
+
             if (final.trim().length > 0) {
-                let siivottu = siivoaTeksti(final.trim());
+                const siivottu = siivoaTeksti(final.trim());
                 if (siivottu.length > 0) {
-                    siivottu = leikkaaToisto(siivottu, edellinenPätkä);
-                    if (siivottu && siivottu.trim().length > 0) {
-                        edellinenPätkä = siivottu;
-                        tallennaMuistiin(siivottu.trim());
+                    // Verrataan koko päivän tallennettuun tekstiin
+                    const uusiOsa = vainUusiOsa(siivottu, haeTallennettu());
+                    if (uusiOsa && uusiOsa.trim().length > 1) {
+                        tallennaMuistiin(uusiOsa.trim());
                         livePreview.innerText = "";
                         väläytäRuutu();
                     }
@@ -192,7 +206,6 @@
         } else {
             lockRestart = false;
             isRecording = true;
-            edellinenPätkä = "";
             pyydäWakeLock();
             try { recognition.start(); } catch(e) {}
         }
@@ -205,7 +218,6 @@
         micIcon.innerText = "🎙️";
         statusText.innerText = "Valmis tallentamaan.";
         livePreview.style.display = "none";
-        edellinenPätkä = "";
         paivitaLista();
     }
 
