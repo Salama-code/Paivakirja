@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v10</title>
+    <title>Oranssi Äänipäiväkirja PRO v12</title>
     <style>
         :root {
             --bg-color: #121212; --surface-color: #1e1e1e;
@@ -26,12 +26,14 @@
         .history-zone { display: flex; flex-direction: column; gap: 15px; }
         .history-zone h2 { font-size: 1.3rem; color: var(--light-orange); border-bottom: 1px solid #333; padding-bottom: 5px; }
         .entry-card { background-color: var(--surface-color); border-radius: 15px; padding: 20px; border-left: 5px solid var(--primary-orange); display: flex; flex-direction: column; gap: 15px; }
-        .entry-header { display: flex; justify-content: space-between; align-items: center; }
+        .entry-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .entry-date { font-weight: bold; color: var(--light-orange); font-size: 1.1rem; }
-        .actions { display: flex; gap: 8px; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-small { background-color: transparent; border: 1px solid var(--primary-orange); color: var(--primary-orange); padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
         .btn-small.delete { border-color: var(--danger-red); color: var(--danger-red); }
+        .btn-small.save { background-color: var(--primary-orange); color: white; }
         .entry-content { font-size: 1.1rem; line-height: 1.6; white-space: pre-wrap; }
+        .entry-editor { width: 100%; min-height: 120px; background-color: rgba(0,0,0,0.3); border: 1px solid var(--primary-orange); border-radius: 10px; padding: 12px; font-size: 1.1rem; line-height: 1.6; color: var(--text-color); resize: vertical; display: none; }
         .no-entries { text-align: center; color: var(--text-muted); padding: 20px; font-style: italic; }
         @keyframes pulse-btn { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
         @keyframes pulse-border { 0%,100% { box-shadow: 0 0 15px rgba(255,102,0,0.2); } 50% { box-shadow: 0 0 30px rgba(255,102,0,0.5); background-color: #1a0f07; } }
@@ -39,7 +41,7 @@
 </head>
 <body>
 <div class="container">
-    <header><h1>Oranssi Äänipäiväkirja PRO v10</h1></header>
+    <header><h1>Oranssi Äänipäiväkirja PRO v12</h1></header>
     <div class="record-zone" id="recordZone">
         <button class="record-btn" id="recordBtn">
             <span class="mic-icon" id="micIcon">🎙️</span>
@@ -66,19 +68,13 @@
         return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
     }
 
-    // Palauttaa vain sen osan uudesta tekstistä joka ei ole jo tallennetussa
     function vainUusiOsa(uusi, tallennettu) {
         if (!tallennettu || !uusi) return uusi;
         const u = uusi.trim().toLowerCase();
         const t = tallennettu.trim().toLowerCase();
-        
-        // Jos uusi teksti on kokonaan jo tallennetussa, ei mitään lisättävää
         if (t.includes(u)) return "";
-
-        // Etsitään pisin loppupätkä tallennetusta joka löytyy uuden alusta
         const tSanat = t.split(/\s+/);
         const uSanat = uusi.trim().split(/\s+/);
-        
         for (let pituus = Math.min(tSanat.length, uSanat.length - 1); pituus >= 1; pituus--) {
             const tLoppu = tSanat.slice(-pituus).join(' ');
             const uAlku = uSanat.slice(0, pituus).join(' ').toLowerCase();
@@ -154,7 +150,7 @@
                     if (isRecording && !lockRestart) {
                         try { recognition.start(); } catch(e) {}
                     }
-                }, 1200);
+                }, 2500);
             } else if (!isRecording) {
                 stopRecordingUI();
             }
@@ -172,7 +168,6 @@
             if (final.trim().length > 0) {
                 const siivottu = siivoaTeksti(final.trim());
                 if (siivottu.length > 0) {
-                    // Verrataan koko päivän tallennettuun tekstiin
                     const uusiOsa = vainUusiOsa(siivottu, haeTallennettu());
                     if (uusiOsa && uusiOsa.trim().length > 1) {
                         tallennaMuistiin(uusiOsa.trim());
@@ -188,7 +183,7 @@
             statusText.innerText = "Käynnistetään automaattisesti...";
             setTimeout(() => {
                 try { isRecording = true; recognition.start(); } catch(e) {}
-            }, 1200);
+            }, 2500);
         });
 
     } else {
@@ -224,7 +219,22 @@
     function tallennaMuistiin(uusiTeksti) {
         const pvm = haePvm();
         let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-        kaikki[pvm] = kaikki[pvm] ? kaikki[pvm].trim() + " " + uusiTeksti : uusiTeksti;
+        if (kaikki[pvm]) {
+            // Lisätään piste edellisen lauseen loppuun jos ei ole
+            const edellinen = kaikki[pvm].trim();
+            const viimeinenMerkki = edellinen.slice(-1);
+            const erotin = ['.', '!', '?'].includes(viimeinenMerkki) ? ' ' : '. ';
+            kaikki[pvm] = edellinen + erotin + uusiTeksti;
+        } else {
+            kaikki[pvm] = uusiTeksti;
+        }
+        localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
+        paivitaLista();
+    }
+
+    function tallennaMuokattu(pvm, uusiTeksti) {
+        let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+        kaikki[pvm] = uusiTeksti;
         localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
         paivitaLista();
     }
@@ -255,13 +265,45 @@
                 <div class="entry-header">
                     <span class="entry-date">${pvm}</span>
                     <div class="actions">
+                        <button class="btn-small" id="muokkaa-${pvm}">✏️ Muokkaa</button>
                         <button class="btn-small" id="jaa-${pvm}">Jaa</button>
                         <button class="btn-small delete" id="poista-${pvm}">Poista</button>
                     </div>
                 </div>
-                <div class="entry-content">${teksti}</div>
+                <div class="entry-content" id="content-${pvm}">${teksti}</div>
+                <textarea class="entry-editor" id="editor-${pvm}">${teksti}</textarea>
+                <button class="btn-small save" id="tallenna-${pvm}" style="display:none">💾 Tallenna</button>
             `;
             container.appendChild(card);
+
+            const muokkaaBtn = document.getElementById(`muokkaa-${pvm}`);
+            const tallennaBtn = document.getElementById(`tallenna-${pvm}`);
+            const editor = document.getElementById(`editor-${pvm}`);
+            const content = document.getElementById(`content-${pvm}`);
+
+            muokkaaBtn.addEventListener('click', () => {
+                const muokkausTila = editor.style.display === 'block';
+                if (muokkausTila) {
+                    // Sulje muokkaus
+                    editor.style.display = 'none';
+                    tallennaBtn.style.display = 'none';
+                    muokkaaBtn.innerText = '✏️ Muokkaa';
+                } else {
+                    // Avaa muokkaus
+                    editor.style.display = 'block';
+                    tallennaBtn.style.display = 'block';
+                    muokkaaBtn.innerText = '✕ Peruuta';
+                    editor.focus();
+                }
+            });
+
+            tallennaBtn.addEventListener('click', () => {
+                const uusiTeksti = editor.value.trim();
+                if (uusiTeksti.length > 0) {
+                    tallennaMuokattu(pvm, uusiTeksti);
+                }
+            });
+
             document.getElementById(`jaa-${pvm}`).addEventListener('click', () => {
                 if (navigator.share) navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti }).catch(e => {});
                 else alert("Laite ei tue suoraan jakoa.");
