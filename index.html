@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v6</title>
+    <title>Oranssi Äänipäiväkirja PRO v7</title>
     <style>
         :root {
             --bg-color: #121212; --surface-color: #1e1e1e;
@@ -26,16 +26,16 @@
         .history-zone { display: flex; flex-direction: column; gap: 15px; }
         .history-zone h2 { font-size: 1.3rem; color: var(--light-orange); border-bottom: 1px solid #333; padding-bottom: 5px; }
         .entry-card { background-color: var(--surface-color); border-radius: 15px; padding: 20px; border-left: 5px solid var(--primary-orange); display: flex; flex-direction: column; gap: 15px; }
-        .entry-header { display: flex; justify-content: space-between; align-items: center; }
+        .entry-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .entry-date { font-weight: bold; color: var(--light-orange); font-size: 1.1rem; }
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-small { background-color: transparent; border: 1px solid var(--primary-orange); color: var(--primary-orange); padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
         .btn-small.delete { border-color: var(--danger-red); color: var(--danger-red); }
         .btn-small.tiivista { border-color: #aa44ff; color: #aa44ff; }
         .btn-small:disabled { opacity: 0.4; }
         .entry-content { font-size: 1.1rem; line-height: 1.6; white-space: pre-wrap; }
         .entry-content.tiivistetty { border-left: 3px solid #aa44ff; padding-left: 10px; font-style: italic; }
-        .alkuperainen { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; cursor: pointer; text-decoration: underline; }
+        .alkuperainen-linkki { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; cursor: pointer; text-decoration: underline; }
         .no-entries { text-align: center; color: var(--text-muted); padding: 20px; font-style: italic; }
         @keyframes pulse-btn { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
         @keyframes pulse-border { 0%,100% { box-shadow: 0 0 15px rgba(255,102,0,0.2); } 50% { box-shadow: 0 0 30px rgba(255,102,0,0.5); background-color: #1a0f07; } }
@@ -43,7 +43,7 @@
 </head>
 <body>
 <div class="container">
-    <header><h1>Oranssi Äänipäiväkirja PRO v6</h1></header>
+    <header><h1>Oranssi Äänipäiväkirja PRO v7</h1></header>
     <div class="record-zone" id="recordZone">
         <button class="record-btn" id="recordBtn">
             <span class="mic-icon" id="micIcon">🎙️</span>
@@ -72,18 +72,8 @@
         return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
     }
 
-    function poistaJoTallennettu(uusi, tallennettu) {
-        if (!tallennettu) return uusi;
-        const uusiSanat = uusi.split(' ');
-        const tallennettuLower = tallennettu.toLowerCase();
-        for (let i = 0; i < uusiSanat.length; i++) {
-            const loppu = uusiSanat.slice(i).join(' ');
-            if (!tallennettuLower.includes(loppu.toLowerCase())) {
-                return uusiSanat.slice(i).join(' ');
-            }
-        }
-        return "";
-    }
+    // Tallennetaan jokainen final-pätkä erikseen jotta ei toistu
+    let tallennetutPätkät = new Set();
 
     function väläytäRuutu() {
         document.body.classList.add('flash');
@@ -96,7 +86,6 @@
         }
     }
 
-    // Tiivistä Claude API:lla
     async function tiivistäTeksti(pvm, raakaTeksti, nappi) {
         nappi.disabled = true;
         nappi.innerText = "⏳";
@@ -115,32 +104,32 @@
                     max_tokens: 1000,
                     messages: [{
                         role: "user",
-                        content: `Olet päiväkirja-avustaja. Alla on puheentunnistuksella tallennettu päiväkirjateksti jossa voi olla toistoa ja epäselvyyksiä. Siisti se luettavaksi päiväkirjamerkinnäksi suomeksi. Säilytä kaikki mainitut asiat ja henkilökohtainen sävy. Älä lisää mitään uutta. Vastaa pelkällä siisityllä tekstillä ilman selityksiä.
-
-Teksti:
-${raakaTeksti}`
+                        content: `Olet päiväkirja-avustaja. Alla on puheentunnistuksella tallennettu päiväkirjateksti jossa voi olla toistoa ja epäselvyyksiä. Siisti se luettavaksi päiväkirjamerkinnäksi suomeksi. Säilytä kaikki mainitut asiat ja henkilökohtainen sävy. Älä lisää mitään uutta. Vastaa pelkällä siisityllä tekstillä ilman selityksiä.\n\nTeksti:\n${raakaTeksti}`
                     }]
                 })
             });
 
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || "API virhe");
+            }
+
             const data = await response.json();
             const tiivistetty = data.content[0].text.trim();
 
-            // Tallennetaan tiivistetty versio, alkuperäinen säilyy erikseen
             let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
             let alkuperaiset = JSON.parse(localStorage.getItem('aanipaivakirja_alkuperaiset')) || {};
-            
-            alkuperaiset[pvm] = raakaTeksti; // Tallennetaan alkuperäinen
+            alkuperaiset[pvm] = raakaTeksti;
             kaikki[pvm] = tiivistetty;
-
             localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
             localStorage.setItem('aanipaivakirja_alkuperaiset', JSON.stringify(alkuperaiset));
             paivitaLista();
 
         } catch(e) {
-            alert("Tiivistäminen epäonnistui. Tarkista verkkoyhteys.");
+            console.error("Tiivistysvirhe:", e);
+            alert("Tiivistäminen epäonnistui: " + e.message);
             nappi.disabled = false;
-            nappi.innerText = "Tiivistä";
+            nappi.innerText = "✨ Tiivistä";
         }
     }
 
@@ -161,11 +150,6 @@ ${raakaTeksti}`
         return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
     }
 
-    function haeNykyinenTeksti() {
-        const kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-        return kaikki[haePvm()] || "";
-    }
-
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SR();
@@ -176,6 +160,7 @@ ${raakaTeksti}`
         recognition.onstart = () => {
             isRecording = true;
             lockRestart = false;
+            tallennetutPätkät.clear(); // Nollataan pätkämuisti uuden istunnon alussa
             recordBtn.classList.add('recording');
             recordZone.classList.add('recording');
             btnText.innerText = "Lopeta";
@@ -212,13 +197,15 @@ ${raakaTeksti}`
                 else interim += event.results[i][0].transcript;
             }
             if (interim) livePreview.innerText = interim;
+
             if (final.trim().length > 0) {
-                const siivottu = siivoaTeksti(final);
+                const siivottu = siivoaTeksti(final.trim());
                 if (siivottu.length > 0) {
-                    const nykyinen = haeNykyinenTeksti();
-                    const uusiOsa = poistaJoTallennettu(siivottu, nykyinen);
-                    if (uusiOsa.length > 0) {
-                        tallennaMuistiin(uusiOsa);
+                    // Tarkistetaan onko tämä pätkä jo tallennettu tässä istunnossa
+                    const avain = siivottu.toLowerCase();
+                    if (!tallennetutPätkät.has(avain)) {
+                        tallennetutPätkät.add(avain);
+                        tallennaMuistiin(siivottu);
                         livePreview.innerText = "";
                         väläytäRuutu();
                     }
@@ -285,10 +272,9 @@ ${raakaTeksti}`
     }
 
     function näytäAlkuperäinen(pvm) {
-        const alkuperaiset = JSON.parse(localStorage.getItem('aanipaivakirja_alkuperaiset')) || {};
+        let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+        let alkuperaiset = JSON.parse(localStorage.getItem('aanipaivakirja_alkuperaiset')) || {};
         if (alkuperaiset[pvm]) {
-            // Palautetaan alkuperäinen
-            let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
             kaikki[pvm] = alkuperaiset[pvm];
             delete alkuperaiset[pvm];
             localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
@@ -310,30 +296,38 @@ ${raakaTeksti}`
         päivät.forEach(pvm => {
             const teksti = kaikki[pvm];
             const onTiivistetty = !!alkuperaiset[pvm];
+            const turvaTeksti = teksti.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
             const card = document.createElement('div');
             card.className = 'entry-card';
             card.innerHTML = `
                 <div class="entry-header">
                     <span class="entry-date">${pvm}</span>
                     <div class="actions">
-                        ${!onTiivistetty ? `<button class="btn-small tiivista" onclick="tiivistäTeksti('${pvm}', \`${teksti.replace(/`/g, "'")}\`, this)">✨ Tiivistä</button>` : `<button class="btn-small" onclick="näytäAlkuperäinen('${pvm}')">Alkuperäinen</button>`}
-                        <button class="btn-small" onclick="jaaTeksti('${pvm}', \`${teksti.replace(/`/g, "'")}\`)">Jaa</button>
-                        <button class="btn-small delete" onclick="poistaMerkintä('${pvm}')">Poista</button>
+                        ${!onTiivistetty
+                            ? `<button class="btn-small tiivista" id="tiivista-${pvm}">✨ Tiivistä</button>`
+                            : `<button class="btn-small" id="alkup-${pvm}">↩ Alkuperäinen</button>`}
+                        <button class="btn-small" id="jaa-${pvm}">Jaa</button>
+                        <button class="btn-small delete" id="poista-${pvm}">Poista</button>
                     </div>
                 </div>
                 <div class="entry-content ${onTiivistetty ? 'tiivistetty' : ''}">${teksti}</div>
-                ${onTiivistetty ? `<div class="alkuperainen" onclick="näytäAlkuperäinen('${pvm}')">↩ Palauta alkuperäinen</div>` : ''}
             `;
             container.appendChild(card);
-        });
-    }
 
-    function jaaTeksti(pvm, teksti) {
-        if (navigator.share) {
-            navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti }).catch(e => {});
-        } else {
-            alert("Laite ei tue suoraan jakoa.");
-        }
+            // Lisätään event listenerit turvallisesti ilman inline-JS:ää
+            if (!onTiivistetty) {
+                document.getElementById(`tiivista-${pvm}`).addEventListener('click', function() {
+                    tiivistäTeksti(pvm, teksti, this);
+                });
+            } else {
+                document.getElementById(`alkup-${pvm}`).addEventListener('click', () => näytäAlkuperäinen(pvm));
+            }
+            document.getElementById(`jaa-${pvm}`).addEventListener('click', () => {
+                if (navigator.share) navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti }).catch(e => {});
+                else alert("Laite ei tue suoraan jakoa.");
+            });
+            document.getElementById(`poista-${pvm}`).addEventListener('click', () => poistaMerkintä(pvm));
+        });
     }
 
     paivitaLista();
