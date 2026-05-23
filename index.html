@@ -3,452 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v3</title>
+    <title>Oranssi Äänipäiväkirja PRO v6</title>
     <style>
         :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-orange: #ff6600;
-            --light-orange: #ff944d;
-            --text-color: #ffffff;
-            --text-muted: #b3b3b3;
-            --danger-red: #cc0000;
+            --bg-color: #121212; --surface-color: #1e1e1e;
+            --primary-orange: #ff6600; --light-orange: #ff944d;
+            --text-color: #ffffff; --text-muted: #b3b3b3; --danger-red: #cc0000;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            transition: background-color 0.1s;
-        }
-
-        body.flash {
-            background-color: #ff6600;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-
-        header {
-            text-align: center;
-        }
-
-        header h1 {
-            color: var(--primary-orange);
-            font-size: 1.6rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .record-zone {
-            background-color: var(--surface-color);
-            border-radius: 20px;
-            padding: 30px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            border: 2px solid #2a2a2a;
-            transition: all 0.3s ease;
-        }
-
-        .record-zone.recording {
-            border-color: var(--primary-orange);
-            animation: pulse-border 2s infinite;
-        }
-
-        .record-btn {
-            width: 200px;
-            height: 200px;
-            border-radius: 40px;
-            border: none;
-            background-color: var(--primary-orange);
-            color: white;
-            font-size: 1.4rem;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(255, 102, 0, 0.3);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .record-btn.recording {
-            background-color: var(--danger-red);
-            animation: pulse-btn 1.5s infinite;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; transition: background-color 0.1s; }
+        body.flash { background-color: #ff6600; }
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 25px; }
+        header { text-align: center; }
+        header h1 { color: var(--primary-orange); font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px; }
+        .record-zone { background-color: var(--surface-color); border-radius: 20px; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 2px solid #2a2a2a; transition: all 0.3s ease; }
+        .record-zone.recording { border-color: var(--primary-orange); animation: pulse-border 2s infinite; }
+        .record-btn { width: 200px; height: 200px; border-radius: 40px; border: none; background-color: var(--primary-orange); color: white; font-size: 1.4rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .record-btn.recording { background-color: var(--danger-red); animation: pulse-btn 1.5s infinite; }
         .mic-icon { font-size: 3rem; }
-
-        .status-text {
-            font-size: 1.2rem;
-            font-weight: 500;
-            color: var(--light-orange);
-            text-align: center;
-        }
-
-        .live-preview {
-            width: 100%;
-            min-height: 60px;
-            background-color: rgba(0,0,0,0.3);
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 1.1rem;
-            border-left: 4px solid var(--primary-orange);
-            display: none;
-        }
-
-        .history-zone {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .history-zone h2 {
-            font-size: 1.3rem;
-            color: var(--light-orange);
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-        }
-
-        .entry-card {
-            background-color: var(--surface-color);
-            border-radius: 15px;
-            padding: 20px;
-            border-left: 5px solid var(--primary-orange);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .entry-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .entry-date {
-            font-weight: bold;
-            color: var(--light-orange);
-            font-size: 1.1rem;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-small {
-            background-color: transparent;
-            border: 1px solid var(--primary-orange);
-            color: var(--primary-orange);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-
-        .btn-small.delete {
-            border-color: var(--danger-red);
-            color: var(--danger-red);
-        }
-
-        .entry-content {
-            font-size: 1.1rem;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        .no-entries {
-            text-align: center;
-            color: var(--text-muted);
-            padding: 20px;
-            font-style: italic;
-        }
-
-        @keyframes pulse-btn {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.03); }
-            100% { transform: scale(1); }
-        }
-
-        @keyframes pulse-border {
-            0% { box-shadow: 0 0 15px rgba(255, 102, 0, 0.2); }
-            50% { box-shadow: 0 0 30px rgba(255, 102, 0, 0.5); background-color: #1a0f07; }
-            100% { box-shadow: 0 0 15px rgba(255, 102, 0, 0.2); }
-        }
+        .status-text { font-size: 1.2rem; font-weight: 500; color: var(--light-orange); text-align: center; }
+        .live-preview { width: 100%; min-height: 60px; background-color: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; font-size: 1.1rem; border-left: 4px solid var(--primary-orange); display: none; }
+        .history-zone { display: flex; flex-direction: column; gap: 15px; }
+        .history-zone h2 { font-size: 1.3rem; color: var(--light-orange); border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .entry-card { background-color: var(--surface-color); border-radius: 15px; padding: 20px; border-left: 5px solid var(--primary-orange); display: flex; flex-direction: column; gap: 15px; }
+        .entry-header { display: flex; justify-content: space-between; align-items: center; }
+        .entry-date { font-weight: bold; color: var(--light-orange); font-size: 1.1rem; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .btn-small { background-color: transparent; border: 1px solid var(--primary-orange); color: var(--primary-orange); padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        .btn-small.delete { border-color: var(--danger-red); color: var(--danger-red); }
+        .btn-small.tiivista { border-color: #aa44ff; color: #aa44ff; }
+        .btn-small:disabled { opacity: 0.4; }
+        .entry-content { font-size: 1.1rem; line-height: 1.6; white-space: pre-wrap; }
+        .entry-content.tiivistetty { border-left: 3px solid #aa44ff; padding-left: 10px; font-style: italic; }
+        .alkuperainen { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; cursor: pointer; text-decoration: underline; }
+        .no-entries { text-align: center; color: var(--text-muted); padding: 20px; font-style: italic; }
+        @keyframes pulse-btn { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+        @keyframes pulse-border { 0%,100% { box-shadow: 0 0 15px rgba(255,102,0,0.2); } 50% { box-shadow: 0 0 30px rgba(255,102,0,0.5); background-color: #1a0f07; } }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <header>
-            <h1>Oranssi Äänipäiväkirja PRO v3</h1>
-        </header>
-
-        <div class="record-zone" id="recordZone">
-            <button class="record-btn" id="recordBtn">
-                <span class="mic-icon" id="micIcon">🎙️</span>
-                <span id="btnText">Käynnistetään...</span>
-            </button>
-            <div class="status-text" id="statusText">Valmistellaan sovellusta...</div>
-            <div class="live-preview" id="livePreview"></div>
-        </div>
-
-        <div class="history-zone">
-            <h2>Tallennetut päivät</h2>
-            <div id="entriesContainer"></div>
-        </div>
+<div class="container">
+    <header><h1>Oranssi Äänipäiväkirja PRO v6</h1></header>
+    <div class="record-zone" id="recordZone">
+        <button class="record-btn" id="recordBtn">
+            <span class="mic-icon" id="micIcon">🎙️</span>
+            <span id="btnText">Käynnistetään...</span>
+        </button>
+        <div class="status-text" id="statusText">Valmistellaan...</div>
+        <div class="live-preview" id="livePreview"></div>
     </div>
+    <div class="history-zone">
+        <h2>Tallennetut päivät</h2>
+        <div id="entriesContainer"></div>
+    </div>
+</div>
 
-    <script>
-        const täytesanat = ["ööö", "öö", "ää", "niinku", "tuota", "totta", "silleen", "sit", "sitku", "vai ninku"];
+<script>
+    const API_KEY = "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";
 
-        function siivoaTeksti(teksti) {
-            if (!teksti) return "";
-            let puhdistettu = teksti;
-            täytesanat.forEach(sana => {
-                const regex = new RegExp(`(^|\\s)${sana}(\\s|$)`, 'gi');
-                puhdistettu = puhdistettu.replace(regex, ' ');
-            });
-            puhdistettu = puhdistettu.replace(/\s+/g, ' ').trim();
-            if (puhdistettu.length > 0) {
-                puhdistettu = puhdistettu.charAt(0).toUpperCase() + puhdistettu.slice(1);
-            }
-            return puhdistettu;
-        }
+    const täytesanat = ["ööö", "öö", "ää", "niinku", "tuota", "totta", "silleen", "sit", "sitku"];
 
-        // Oranssi välähdys äänikuittauksen sijaan — ei luuppia, ei katkaisua
-        function väläytäRuutu() {
-            document.body.classList.add('flash');
-            setTimeout(() => document.body.classList.remove('flash'), 200);
-        }
+    function siivoaTeksti(t) {
+        if (!t) return "";
+        täytesanat.forEach(s => {
+            t = t.replace(new RegExp(`(^|\\s)${s}(\\s|$)`, 'gi'), ' ');
+        });
+        t = t.replace(/\s+/g, ' ').trim();
+        return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+    }
 
-        let wakeLock = null;
-        async function pyydäWakeLock() {
-            if ('wakeLock' in navigator) {
-                try {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                } catch (err) {
-                    console.warn(`WakeLock virhe: ${err.message}`);
-                }
+    function poistaJoTallennettu(uusi, tallennettu) {
+        if (!tallennettu) return uusi;
+        const uusiSanat = uusi.split(' ');
+        const tallennettuLower = tallennettu.toLowerCase();
+        for (let i = 0; i < uusiSanat.length; i++) {
+            const loppu = uusiSanat.slice(i).join(' ');
+            if (!tallennettuLower.includes(loppu.toLowerCase())) {
+                return uusiSanat.slice(i).join(' ');
             }
         }
+        return "";
+    }
 
-        const recordBtn = document.getElementById('recordBtn');
-        const recordZone = document.getElementById('recordZone');
-        const statusText = document.getElementById('statusText');
-        const livePreview = document.getElementById('livePreview');
-        const micIcon = document.getElementById('micIcon');
-        const btnText = document.getElementById('btnText');
+    function väläytäRuutu() {
+        document.body.classList.add('flash');
+        setTimeout(() => document.body.classList.remove('flash'), 200);
+    }
 
-        let recognition = null;
-        let isRecording = false;
-        let lockRestart = false;
-        let restartTimer = null;
+    async function pyydäWakeLock() {
+        if ('wakeLock' in navigator) {
+            try { await navigator.wakeLock.request('screen'); } catch(e) {}
+        }
+    }
 
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'fi-FI';
+    // Tiivistä Claude API:lla
+    async function tiivistäTeksti(pvm, raakaTeksti, nappi) {
+        nappi.disabled = true;
+        nappi.innerText = "⏳";
 
-            recognition.onstart = () => {
-                isRecording = true;
-                lockRestart = false;
-                recordBtn.classList.add('recording');
-                recordZone.classList.add('recording');
-                btnText.innerText = "Lopeta";
-                micIcon.innerText = "🛑";
-                statusText.innerText = "Kuuntelen... Puhu vapaasti.";
-                livePreview.style.display = "block";
-            };
+        try {
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "anthropic-dangerous-direct-browser-access": "true"
+                },
+                body: JSON.stringify({
+                    model: "claude-haiku-4-5-20251001",
+                    max_tokens: 1000,
+                    messages: [{
+                        role: "user",
+                        content: `Olet päiväkirja-avustaja. Alla on puheentunnistuksella tallennettu päiväkirjateksti jossa voi olla toistoa ja epäselvyyksiä. Siisti se luettavaksi päiväkirjamerkinnäksi suomeksi. Säilytä kaikki mainitut asiat ja henkilökohtainen sävy. Älä lisää mitään uutta. Vastaa pelkällä siisityllä tekstillä ilman selityksiä.
 
-            recognition.onerror = (event) => {
-                console.error("Tunnistusvirhe:", event.error);
-                if (event.error === 'not-allowed') {
-                    statusText.innerText = "Mikrofoni estetty. Anna lupa.";
-                    lockRestart = true;
-                }
-                // Muut virheet (network, no-speech) — yritetään uudelleen
-            };
-
-            recognition.onend = () => {
-                if (isRecording && !lockRestart) {
-                    // Pidempi viive sallii tauot puheessa ennen uudelleenkäynnistystä
-                    restartTimer = setTimeout(() => {
-                        if (isRecording && !lockRestart) {
-                            try { recognition.start(); } catch(e) {}
-                        }
-                    }, 1500); // 1.5 sekunnin tauko sallittu
-                } else if (!isRecording) {
-                    stopRecordingUI();
-                }
-            };
-
-            recognition.onresult = (event) => {
-                // Jos tulos tulee, ollaan vielä aktiivisia — peruutetaan mahdollinen restart-timer
-                if (restartTimer) {
-                    clearTimeout(restartTimer);
-                    restartTimer = null;
-                }
-
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                if (interimTranscript) {
-                    livePreview.innerText = interimTranscript;
-                }
-
-                if (finalTranscript.trim().length > 0) {
-                    const siivottuOsa = siivoaTeksti(finalTranscript);
-                    if (siivottuOsa.length > 0) {
-                        tallennaMuistiin(siivottuOsa);
-                        livePreview.innerText = "";
-                        väläytäRuutu(); // Hiljainen visuaalinen kuittaus
-                    }
-                }
-            };
-
-            window.addEventListener('load', () => {
-                pyydäWakeLock();
-                statusText.innerText = "Käynnistetään automaattisesti...";
-                setTimeout(() => {
-                    try {
-                        isRecording = true;
-                        recognition.start();
-                    } catch(e) {}
-                }, 1500);
+Teksti:
+${raakaTeksti}`
+                    }]
+                })
             });
 
-        } else {
-            statusText.innerText = "Selaimesi ei tue puheentunnistusta.";
-            recordBtn.disabled = true;
+            const data = await response.json();
+            const tiivistetty = data.content[0].text.trim();
+
+            // Tallennetaan tiivistetty versio, alkuperäinen säilyy erikseen
+            let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+            let alkuperaiset = JSON.parse(localStorage.getItem('aanipaivakirja_alkuperaiset')) || {};
+            
+            alkuperaiset[pvm] = raakaTeksti; // Tallennetaan alkuperäinen
+            kaikki[pvm] = tiivistetty;
+
+            localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
+            localStorage.setItem('aanipaivakirja_alkuperaiset', JSON.stringify(alkuperaiset));
+            paivitaLista();
+
+        } catch(e) {
+            alert("Tiivistäminen epäonnistui. Tarkista verkkoyhteys.");
+            nappi.disabled = false;
+            nappi.innerText = "Tiivistä";
         }
+    }
 
-        recordBtn.addEventListener('click', muutaTilaa);
+    const recordBtn = document.getElementById('recordBtn');
+    const recordZone = document.getElementById('recordZone');
+    const statusText = document.getElementById('statusText');
+    const livePreview = document.getElementById('livePreview');
+    const micIcon = document.getElementById('micIcon');
+    const btnText = document.getElementById('btnText');
 
-        function muutaTilaa() {
-            if (!recognition) return;
-            if (isRecording) {
-                isRecording = false;
+    let recognition = null;
+    let isRecording = false;
+    let lockRestart = false;
+    let restartTimer = null;
+
+    function haePvm() {
+        const d = new Date();
+        return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+    }
+
+    function haeNykyinenTeksti() {
+        const kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+        return kaikki[haePvm()] || "";
+    }
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SR();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'fi-FI';
+
+        recognition.onstart = () => {
+            isRecording = true;
+            lockRestart = false;
+            recordBtn.classList.add('recording');
+            recordZone.classList.add('recording');
+            btnText.innerText = "Lopeta";
+            micIcon.innerText = "🛑";
+            statusText.innerText = "Kuuntelen... Puhu vapaasti.";
+            livePreview.style.display = "block";
+        };
+
+        recognition.onerror = (e) => {
+            if (e.error === 'not-allowed') {
+                statusText.innerText = "Mikrofoni estetty. Anna lupa.";
+                lockRestart = true;
+            }
+        };
+
+        recognition.onend = () => {
+            if (isRecording && !lockRestart) {
                 clearTimeout(restartTimer);
-                try { recognition.stop(); } catch(e) {}
+                restartTimer = setTimeout(() => {
+                    if (isRecording && !lockRestart) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                }, 500);
+            } else if (!isRecording) {
                 stopRecordingUI();
-            } else {
-                lockRestart = false;
-                isRecording = true;
-                pyydäWakeLock();
-                try { recognition.start(); } catch(e) {}
             }
-        }
+        };
 
-        function stopRecordingUI() {
-            recordBtn.classList.remove('recording');
-            recordZone.classList.remove('recording');
-            btnText.innerText = "Puhu";
-            micIcon.innerText = "🎙️";
-            statusText.innerText = "Valmis tallentamaan.";
-            livePreview.style.display = "none";
-            paivitaLista();
-        }
-
-        function haeTämänPäivänPäivämäärä() {
-            const d = new Date();
-            return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
-        }
-
-        function tallennaMuistiin(uusiTeksti) {
-            const pvm = haeTämänPäivänPäivämäärä();
-            let kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-            if (kaikkiMerkinnät[pvm]) {
-                kaikkiMerkinnät[pvm] = kaikkiMerkinnät[pvm].trim() + " " + uusiTeksti;
-            } else {
-                kaikkiMerkinnät[pvm] = uusiTeksti;
+        recognition.onresult = (event) => {
+            clearTimeout(restartTimer);
+            let interim = '', final = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) final += event.results[i][0].transcript;
+                else interim += event.results[i][0].transcript;
             }
-            localStorage.setItem('aanipaivakirja', JSON.stringify(kaikkiMerkinnät));
-            paivitaLista();
-        }
-
-        function poistaMerkintä(pvm) {
-            if (confirm(`Haluatko varmasti poistaa päivän ${pvm} merkinnän?`)) {
-                let kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-                delete kaikkiMerkinnät[pvm];
-                localStorage.setItem('aanipaivakirja', JSON.stringify(kaikkiMerkinnät));
-                paivitaLista();
+            if (interim) livePreview.innerText = interim;
+            if (final.trim().length > 0) {
+                const siivottu = siivoaTeksti(final);
+                if (siivottu.length > 0) {
+                    const nykyinen = haeNykyinenTeksti();
+                    const uusiOsa = poistaJoTallennettu(siivottu, nykyinen);
+                    if (uusiOsa.length > 0) {
+                        tallennaMuistiin(uusiOsa);
+                        livePreview.innerText = "";
+                        väläytäRuutu();
+                    }
+                }
             }
+        };
+
+        window.addEventListener('load', () => {
+            pyydäWakeLock();
+            statusText.innerText = "Käynnistetään automaattisesti...";
+            setTimeout(() => {
+                try { isRecording = true; recognition.start(); } catch(e) {}
+            }, 1200);
+        });
+
+    } else {
+        statusText.innerText = "Selaimesi ei tue puheentunnistusta.";
+        recordBtn.disabled = true;
+    }
+
+    recordBtn.addEventListener('click', () => {
+        if (!recognition) return;
+        if (isRecording) {
+            isRecording = false;
+            clearTimeout(restartTimer);
+            try { recognition.stop(); } catch(e) {}
+            stopRecordingUI();
+        } else {
+            lockRestart = false;
+            isRecording = true;
+            pyydäWakeLock();
+            try { recognition.start(); } catch(e) {}
         }
+    });
 
-        function paivitaLista() {
-            const container = document.getElementById('entriesContainer');
-            container.innerHTML = '';
-            const kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-            const päivät = Object.keys(kaikkiMerkinnät).reverse();
-
-            if (päivät.length === 0) {
-                container.innerHTML = '<div class="no-entries">Ei tallennettuja päiviä.</div>';
-                return;
-            }
-
-            päivät.forEach(pvm => {
-                const teksti = kaikkiMerkinnät[pvm];
-                const card = document.createElement('div');
-                card.className = 'entry-card';
-                card.innerHTML = `
-                    <div class="entry-header">
-                        <span class="entry-date">${pvm}</span>
-                        <div class="actions">
-                            <button class="btn-small" onclick="jaaTeksti('${pvm}', \`${teksti}\`)">Jaa</button>
-                            <button class="btn-small delete" onclick="poistaMerkintä('${pvm}')">Poista</button>
-                        </div>
-                    </div>
-                    <div class="entry-content">${teksti}</div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function jaaTeksti(pvm, teksti) {
-            if (navigator.share) {
-                navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti })
-                .catch(err => console.log(err));
-            } else {
-                alert("Laite ei tue suoraan jakoa.");
-            }
-        }
-
+    function stopRecordingUI() {
+        recordBtn.classList.remove('recording');
+        recordZone.classList.remove('recording');
+        btnText.innerText = "Puhu";
+        micIcon.innerText = "🎙️";
+        statusText.innerText = "Valmis tallentamaan.";
+        livePreview.style.display = "none";
         paivitaLista();
-    </script>
+    }
+
+    function tallennaMuistiin(uusiTeksti) {
+        const pvm = haePvm();
+        let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+        kaikki[pvm] = kaikki[pvm] ? kaikki[pvm].trim() + " " + uusiTeksti : uusiTeksti;
+        localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
+        paivitaLista();
+    }
+
+    function poistaMerkintä(pvm) {
+        if (confirm(`Poistetaanko päivän ${pvm} merkintä?`)) {
+            let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+            let alkuperaiset = JSON.parse(localStorage.getItem('aanipaivakirja_alkuperaiset')) || {};
+            delete kaikki[pvm];
+            delete alkuperaiset[pvm];
+            localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
+            localStorage.setItem('aanipaivakirja_alkuperaiset', JSON.stringify(alkuperaiset));
+            paivitaLista();
+        }
+    }
+
+    function näytäAlkuperäinen(pvm) {
+        const alkuperaiset = JSON.parse(localStorage.getItem('aanipaivakirja_alkuperaiset')) || {};
+        if (alkuperaiset[pvm]) {
+            // Palautetaan alkuperäinen
+            let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+            kaikki[pvm] = alkuperaiset[pvm];
+            delete alkuperaiset[pvm];
+            localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
+            localStorage.setItem('aanipaivakirja_alkuperaiset', JSON.stringify(alkuperaiset));
+            paivitaLista();
+        }
+    }
+
+    function paivitaLista() {
+        const container = document.getElementById('entriesContainer');
+        container.innerHTML = '';
+        const kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+        const alkuperaiset = JSON.parse(localStorage.getItem('aanipaivakirja_alkuperaiset')) || {};
+        const päivät = Object.keys(kaikki).reverse();
+        if (päivät.length === 0) {
+            container.innerHTML = '<div class="no-entries">Ei tallennettuja päiviä.</div>';
+            return;
+        }
+        päivät.forEach(pvm => {
+            const teksti = kaikki[pvm];
+            const onTiivistetty = !!alkuperaiset[pvm];
+            const card = document.createElement('div');
+            card.className = 'entry-card';
+            card.innerHTML = `
+                <div class="entry-header">
+                    <span class="entry-date">${pvm}</span>
+                    <div class="actions">
+                        ${!onTiivistetty ? `<button class="btn-small tiivista" onclick="tiivistäTeksti('${pvm}', \`${teksti.replace(/`/g, "'")}\`, this)">✨ Tiivistä</button>` : `<button class="btn-small" onclick="näytäAlkuperäinen('${pvm}')">Alkuperäinen</button>`}
+                        <button class="btn-small" onclick="jaaTeksti('${pvm}', \`${teksti.replace(/`/g, "'")}\`)">Jaa</button>
+                        <button class="btn-small delete" onclick="poistaMerkintä('${pvm}')">Poista</button>
+                    </div>
+                </div>
+                <div class="entry-content ${onTiivistetty ? 'tiivistetty' : ''}">${teksti}</div>
+                ${onTiivistetty ? `<div class="alkuperainen" onclick="näytäAlkuperäinen('${pvm}')">↩ Palauta alkuperäinen</div>` : ''}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function jaaTeksti(pvm, teksti) {
+        if (navigator.share) {
+            navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti }).catch(e => {});
+        } else {
+            alert("Laite ei tue suoraan jakoa.");
+        }
+    }
+
+    paivitaLista();
+</script>
 </body>
 </html>
