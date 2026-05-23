@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v12</title>
+    <title>Oranssi Äänipäiväkirja PRO v13</title>
     <style>
         :root {
             --bg-color: #121212; --surface-color: #1e1e1e;
@@ -41,7 +41,7 @@
 </head>
 <body>
 <div class="container">
-    <header><h1>Oranssi Äänipäiväkirja PRO v12</h1></header>
+    <header><h1>Oranssi Äänipäiväkirja PRO v13</h1></header>
     <div class="record-zone" id="recordZone">
         <button class="record-btn" id="recordBtn">
             <span class="mic-icon" id="micIcon">🎙️</span>
@@ -68,22 +68,9 @@
         return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
     }
 
-    function vainUusiOsa(uusi, tallennettu) {
-        if (!tallennettu || !uusi) return uusi;
-        const u = uusi.trim().toLowerCase();
-        const t = tallennettu.trim().toLowerCase();
-        if (t.includes(u)) return "";
-        const tSanat = t.split(/\s+/);
-        const uSanat = uusi.trim().split(/\s+/);
-        for (let pituus = Math.min(tSanat.length, uSanat.length - 1); pituus >= 1; pituus--) {
-            const tLoppu = tSanat.slice(-pituus).join(' ');
-            const uAlku = uSanat.slice(0, pituus).join(' ').toLowerCase();
-            if (tLoppu === uAlku) {
-                return uSanat.slice(pituus).join(' ');
-            }
-        }
-        return uusi;
-    }
+    // Tallennetaan tämän istunnon kaikki final-pätkät Set:iin
+    // Jos sama pätkä tulee uudelleen, ei tallenneta
+    const tallennetutPätkät = new Set();
 
     function väläytäRuutu() {
         document.body.classList.add('flash');
@@ -111,11 +98,6 @@
     function haePvm() {
         const d = new Date();
         return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
-    }
-
-    function haeTallennettu() {
-        const kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-        return (kaikki[haePvm()] || "").toLowerCase();
     }
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -167,10 +149,11 @@
 
             if (final.trim().length > 0) {
                 const siivottu = siivoaTeksti(final.trim());
-                if (siivottu.length > 0) {
-                    const uusiOsa = vainUusiOsa(siivottu, haeTallennettu());
-                    if (uusiOsa && uusiOsa.trim().length > 1) {
-                        tallennaMuistiin(uusiOsa.trim());
+                if (siivottu.length > 1) {
+                    const avain = siivottu.toLowerCase();
+                    if (!tallennetutPätkät.has(avain)) {
+                        tallennetutPätkät.add(avain);
+                        tallennaMuistiin(siivottu);
                         livePreview.innerText = "";
                         väläytäRuutu();
                     }
@@ -183,7 +166,7 @@
             statusText.innerText = "Käynnistetään automaattisesti...";
             setTimeout(() => {
                 try { isRecording = true; recognition.start(); } catch(e) {}
-            }, 2500);
+            }, 1200);
         });
 
     } else {
@@ -219,15 +202,7 @@
     function tallennaMuistiin(uusiTeksti) {
         const pvm = haePvm();
         let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-        if (kaikki[pvm]) {
-            // Lisätään piste edellisen lauseen loppuun jos ei ole
-            const edellinen = kaikki[pvm].trim();
-            const viimeinenMerkki = edellinen.slice(-1);
-            const erotin = ['.', '!', '?'].includes(viimeinenMerkki) ? ' ' : '. ';
-            kaikki[pvm] = edellinen + erotin + uusiTeksti;
-        } else {
-            kaikki[pvm] = uusiTeksti;
-        }
+        kaikki[pvm] = kaikki[pvm] ? kaikki[pvm].trim() + " " + uusiTeksti : uusiTeksti;
         localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
         paivitaLista();
     }
@@ -279,35 +254,25 @@
             const muokkaaBtn = document.getElementById(`muokkaa-${pvm}`);
             const tallennaBtn = document.getElementById(`tallenna-${pvm}`);
             const editor = document.getElementById(`editor-${pvm}`);
-            const content = document.getElementById(`content-${pvm}`);
 
             muokkaaBtn.addEventListener('click', () => {
-                const muokkausTila = editor.style.display === 'block';
-                if (muokkausTila) {
-                    // Sulje muokkaus
-                    editor.style.display = 'none';
-                    tallennaBtn.style.display = 'none';
-                    muokkaaBtn.innerText = '✏️ Muokkaa';
-                } else {
-                    // Avaa muokkaus
-                    editor.style.display = 'block';
-                    tallennaBtn.style.display = 'block';
-                    muokkaaBtn.innerText = '✕ Peruuta';
-                    editor.focus();
-                }
+                const auki = editor.style.display === 'block';
+                editor.style.display = auki ? 'none' : 'block';
+                tallennaBtn.style.display = auki ? 'none' : 'block';
+                muokkaaBtn.innerText = auki ? '✏️ Muokkaa' : '✕ Peruuta';
+                if (!auki) editor.focus();
             });
 
             tallennaBtn.addEventListener('click', () => {
-                const uusiTeksti = editor.value.trim();
-                if (uusiTeksti.length > 0) {
-                    tallennaMuokattu(pvm, uusiTeksti);
-                }
+                const uusi = editor.value.trim();
+                if (uusi.length > 0) tallennaMuokattu(pvm, uusi);
             });
 
             document.getElementById(`jaa-${pvm}`).addEventListener('click', () => {
                 if (navigator.share) navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti }).catch(e => {});
                 else alert("Laite ei tue suoraan jakoa.");
             });
+
             document.getElementById(`poista-${pvm}`).addEventListener('click', () => poistaMerkintä(pvm));
         });
     }
