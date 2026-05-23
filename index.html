@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v16</title>
+    <title>Oranssi Äänipäiväkirja PRO v18</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -62,11 +62,6 @@
             gap: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             border: 2px solid #2a2a2a;
-            transition: all 0.3s ease;
-        }
-
-        .record-zone.recording {
-            border-color: var(--primary-orange);
         }
 
         .record-btn {
@@ -87,16 +82,16 @@
             gap: 12px;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
-            transition: background-color 0.2s ease;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .record-btn:active {
+            transform: scale(0.98);
         }
 
         .record-btn.recording {
             background-color: var(--danger-red);
-        }
-
-        .record-btn.success {
-            background-color: var(--success-green) !important;
-            box-shadow: 0 6px 20px rgba(0, 204, 102, 0.4);
+            box-shadow: 0 6px 20px rgba(204, 0, 0, 0.4);
         }
 
         .mic-icon { font-size: 3rem; }
@@ -110,13 +105,16 @@
 
         .live-preview {
             width: 100%;
-            min-height: 60px;
-            background-color: rgba(0,0,0,0.3);
+            min-height: 80px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: rgba(0,0,0,0.4);
             border-radius: 10px;
             padding: 12px;
             font-size: 1.1rem;
             border-left: 4px solid var(--primary-orange);
-            display: none;
+            line-height: 1.5;
+            color: #e0e0e0;
         }
 
         .history-zone {
@@ -140,6 +138,7 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         .entry-header {
@@ -193,16 +192,16 @@
 
     <div class="container">
         <header>
-            <h1>Oranssi Äänipäiväkirja PRO v16</h1>
+            <h1>Äänipäiväkirja PRO v18</h1>
         </header>
 
-        <div class="record-zone" id="recordZone">
+        <div class="record-zone">
             <button class="record-btn" id="recordBtn">
                 <span class="mic-icon" id="micIcon">🎙️</span>
-                <span id="btnText">Käynnistetään...</span>
+                <span id="btnText">Puhu</span>
             </button>
-            <div class="status-text" id="statusText">Valmistellaan...</div>
-            <div class="live-preview" id="livePreview"></div>
+            <div class="status-text" id="statusText">Paina painiketta ja aloita puhe</div>
+            <div class="live-preview" id="livePreview">Teksti ilmestyy tähän lennosta...</div>
         </div>
 
         <div class="history-zone">
@@ -213,12 +212,40 @@
 
     <script>
         const täytesanat = ["ööö", "öö", "ää", "niinku", "tuota", "totta", "silleen", "sit", "sitku"];
-        let viimeisinLause = "";
+        let kokoPuheteksti = "";
+        let recognition = null;
+        let isRecording = false;
+        let wakeLock = null;
+
+        // RAJU SUODATIN JOKA POISTAA TUPLASANAT JA TUPLALAUSEET
+        function poistaToistot(teksti) {
+            if (!teksti) return "";
+            
+            // 1. Siivotaan tuplasanat peräkkäin (esim. "Noo Noo" -> "Noo")
+            let sanat = teksti.split(/\s+/);
+            let siivotutSanat = [];
+            for (let i = 0; i < sanat.length; i++) {
+                if (sanat[i].toLowerCase() !== (sanat[i - 1] || "").toLowerCase()) {
+                    siivotutSanat.push(sanat[i]);
+                }
+            }
+            
+            let lause = siivotutSanat.join(" ");
+            
+            // 2. Siivotaan isommat tuplalauseet (esim. "mites nyt toimii mites nyt toimii" -> "mites nyt toimii")
+            // Käytetään regex-taikaa tunnistamaan peräkkäiset toistuvat lausekkeet
+            lause = lause.replace(/(.+?)\s+\1/gi, "$1");
+            
+            return lause;
+        }
 
         function siivoaTeksti(teksti) {
             if (!teksti) return "";
-            let puhdistettu = teksti;
             
+            // Ajetaan ensin raaka toistonpoisto
+            let puhdistettu = poistaToistot(teksti);
+            
+            // Poistetaan täytesanat
             täytesanat.forEach(sana => {
                 const regex = new RegExp(`(^|\\s)${sana}(\\s|$)`, 'gi');
                 puhdistettu = puhdistettu.replace(regex, ' ');
@@ -231,91 +258,69 @@
             return puhdistettu;
         }
 
-        let wakeLock = null;
         async function pyydäWakeLock() {
             if ('wakeLock' in navigator) {
                 try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
             }
         }
 
+        function vapautaWakeLock() {
+            if (wakeLock) {
+                wakeLock.release().then(() => { wakeLock = null; });
+            }
+        }
+
         const recordBtn = document.getElementById('recordBtn');
-        const recordZone = document.getElementById('recordZone');
         const statusText = document.getElementById('statusText');
         const livePreview = document.getElementById('livePreview');
         const micIcon = document.getElementById('micIcon');
         const btnText = document.getElementById('btnText');
 
-        let recognition = null;
-        let isRecording = false;
-
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = true; 
-            recognition.interimResults = true; 
-            recognition.lang = 'fi-FI';
+            
+            function alustaTunnistus() {
+                recognition = new SpeechRecognition();
+                recognition.continuous = true; 
+                recognition.interimResults = true; 
+                recognition.lang = 'fi-FI';
 
-            recognition.onstart = () => {
-                isRecording = true;
-                recordBtn.className = 'record-btn recording';
-                recordZone.classList.add('recording');
-                btnText.innerText = "Lopeta";
-                micIcon.innerText = "🛑";
-                statusText.innerText = "Kuuntelen... Puhu vapaasti.";
-                livePreview.style.display = "block";
-            };
+                recognition.onstart = () => {
+                    kokoPuheteksti = "";
+                    livePreview.innerText = "Kuunnellaan... Puhu rauhassa.";
+                    statusText.innerText = "Tallennus käynnissä...";
+                };
 
-            recognition.onerror = (event) => {
-                console.error(event.error);
-            };
+                recognition.onerror = (event) => {
+                    console.error("Virhe: ", event.error);
+                };
 
-            recognition.onend = () => {
-                if (isRecording) {
-                    try { recognition.start(); } catch(e) {}
-                } else {
-                    stopRecordingUI();
-                }
-            };
+                recognition.onend = () => {
+                    KäsitteleJaTallenna();
+                };
 
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
 
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
                     }
-                }
 
-                if (interimTranscript) {
-                    livePreview.innerText = interimTranscript;
-                }
-
-                if (finalTranscript.trim().length > 0) {
-                    const siivottu = siivoaTeksti(finalTranscript);
-                    
-                    // ESTETÄÄN TUPLALAUSETTA: Jos lause on täysin sama kuin edellinen, ohitetaan se
-                    if (siivottu.length > 0 && siivottu !== viimeisinLause) {
-                        viimeisinLause = siivottu;
-                        tallennaMuistiin(siivottu);
-                        livePreview.innerText = "";
-                        
-                        // Visuaalinen kuittaus: Väläytetään nappia vihreänä
-                        recordBtn.classList.add('success');
-                        setTimeout(() => {
-                            recordBtn.classList.remove('success');
-                        }, 1000);
+                    if (finalTranscript) {
+                        kokoPuheteksti += finalTranscript + " ";
+                        livePreview.innerText = poistaToistot(kokoPuheteksti);
+                    } else if (interimTranscript) {
+                        livePreview.innerText = poistaToistot(kokoPuheteksti + interimTranscript);
                     }
-                }
-            };
+                };
+            }
 
-            window.addEventListener('load', () => {
-                pyydäWakeLock();
-                isRecording = true;
-                try { recognition.start(); } catch(e) {}
-            });
+            alustaTunnistus();
 
         } else {
             statusText.innerText = "Selaimesi ei tue puheentunnistusta.";
@@ -323,25 +328,37 @@
         }
 
         recordBtn.addEventListener('click', () => {
-            if (isRecording) {
-                isRecording = false;
-                try { recognition.stop(); } catch(e) {}
-                stopRecordingUI();
-            } else {
+            if (!isRecording) {
                 isRecording = true;
                 pyydäWakeLock();
-                try { recognition.start(); } catch(e) {}
+                recordBtn.className = 'record-btn recording';
+                btnText.innerText = "Lopeta";
+                micIcon.innerText = "🛑";
+                
+                alustaTunnistus();
+                try { recognition.start(); } catch(e) { console.log(e); }
+            } else {
+                isRecording = false;
+                vapautaWakeLock();
+                recordBtn.className = 'record-btn';
+                btnText.innerText = "Puhu";
+                micIcon.innerText = "🎙️";
+                statusText.innerText = "Tallennetaan...";
+                
+                try { recognition.stop(); } catch(e) { console.log(e); }
             }
         });
 
-        function stopRecordingUI() {
-            recordBtn.className = 'record-btn';
-            recordZone.classList.remove('recording');
-            btnText.innerText = "Puhu";
-            micIcon.innerText = "🎙️";
-            statusText.innerText = "Valmis tallentamaan.";
-            livePreview.style.display = "none";
-            paivitaLista();
+        function KäsitteleJaTallenna() {
+            const siivottu = siivoaTeksti(kokoPuheteksti);
+            
+            if (siivottu.length > 0) {
+                tallennaMuistiin(siivottu);
+                livePreview.innerText = "Tallennettu onnistuneesti ilman toistoja!";
+            } else {
+                livePreview.innerText = "Teksti ilmestyy tähän lennosta...";
+            }
+            statusText.innerText = "Paina painiketta ja aloita puhe";
         }
 
         function haeTämänPäivänPäivämäärä() {
