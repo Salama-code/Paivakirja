@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v8</title>
+    <title>Oranssi Äänipäiväkirja PRO v9</title>
     <style>
         :root {
             --bg-color: #121212; --surface-color: #1e1e1e;
@@ -39,7 +39,7 @@
 </head>
 <body>
 <div class="container">
-    <header><h1>Oranssi Äänipäiväkirja PRO v8</h1></header>
+    <header><h1>Oranssi Äänipäiväkirja PRO v9</h1></header>
     <div class="record-zone" id="recordZone">
         <button class="record-btn" id="recordBtn">
             <span class="mic-icon" id="micIcon">🎙️</span>
@@ -53,7 +53,6 @@
         <div id="entriesContainer"></div>
     </div>
 </div>
-
 <script>
     const täytesanat = ["ööö", "öö", "ää", "niinku", "tuota", "totta", "silleen", "sit", "sitku"];
 
@@ -66,21 +65,16 @@
         return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : "";
     }
 
-    // Tuplasanojen esto: verrataan uutta pätkää edelliseen
-    // Jos uusi pätkä alkaa samoilla sanoilla kuin edellinen päättyi, leikataan päällekkäisyys pois
     function leikkaaToisto(uusi, edellinen) {
         if (!edellinen || !uusi) return uusi;
-        const uusiSanat = uusi.trim().split(/\s+/);
-        const edellinenSanat = edellinen.trim().split(/\s+/);
-
-        // Etsitään pisin yhteinen loppuosa edellisestä ja alkuosa uudesta
-        for (let pituus = Math.min(uusiSanat.length, edellinenSanat.length); pituus > 0; pituus--) {
-            const edellinenLoppu = edellinenSanat.slice(-pituus).join(' ').toLowerCase();
-            const uusiAlku = uusiSanat.slice(0, pituus).join(' ').toLowerCase();
-            if (edellinenAlku => edellinenLoppu === uusiAlku) {
-                // Löytyi päällekkäisyys — palautetaan vain uusi osa
-                const loput = uusiSanat.slice(pituus).join(' ');
-                return loput;
+        const uusiSanat = uusi.trim().toLowerCase().split(/\s+/);
+        const edellinenSanat = edellinen.trim().toLowerCase().split(/\s+/);
+        for (let pituus = Math.min(uusiSanat.length - 1, edellinenSanat.length); pituus >= 1; pituus--) {
+            const edellinenLoppu = edellinenSanat.slice(-pituus).join(' ');
+            const uusiAlku = uusiSanat.slice(0, pituus).join(' ');
+            if (edellinenLoppu === uusiAlku) {
+                const alkuperaisetSanat = uusi.trim().split(/\s+/);
+                return alkuperaisetSanat.slice(pituus).join(' ');
             }
         }
         return uusi;
@@ -108,7 +102,7 @@
     let isRecording = false;
     let lockRestart = false;
     let restartTimer = null;
-    let edellinenPätkä = ""; // Muistetaan edellinen tallennettu pätkä
+    let edellinenPätkä = "";
 
     function haePvm() {
         const d = new Date();
@@ -161,11 +155,9 @@
                 else interim += event.results[i][0].transcript;
             }
             if (interim) livePreview.innerText = interim;
-
             if (final.trim().length > 0) {
                 let siivottu = siivoaTeksti(final.trim());
                 if (siivottu.length > 0) {
-                    // Leikataan mahdollinen toisto edelliseen verraten
                     siivottu = leikkaaToisto(siivottu, edellinenPätkä);
                     if (siivottu && siivottu.trim().length > 0) {
                         edellinenPätkä = siivottu;
