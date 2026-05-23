@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranssi Äänipäiväkirja PRO v4</title>
+    <title>Oranssi Äänipäiväkirja PRO v3</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -14,44 +14,209 @@
             --text-muted: #b3b3b3;
             --danger-red: #cc0000;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; transition: background-color 0.1s; }
-        body.flash { background-color: #ff6600; }
-        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 25px; }
-        header { text-align: center; }
-        header h1 { color: var(--primary-orange); font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px; }
-        .record-zone { background-color: var(--surface-color); border-radius: 20px; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 2px solid #2a2a2a; transition: all 0.3s ease; }
-        .record-zone.recording { border-color: var(--primary-orange); animation: pulse-border 2s infinite; }
-        .record-btn { width: 200px; height: 200px; border-radius: 40px; border: none; background-color: var(--primary-orange); color: white; font-size: 1.4rem; font-weight: bold; cursor: pointer; box-shadow: 0 6px 20px rgba(255,102,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .record-btn.recording { background-color: var(--danger-red); animation: pulse-btn 1.5s infinite; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.1s;
+        }
+
+        body.flash {
+            background-color: #ff6600;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        header h1 {
+            color: var(--primary-orange);
+            font-size: 1.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .record-zone {
+            background-color: var(--surface-color);
+            border-radius: 20px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 2px solid #2a2a2a;
+            transition: all 0.3s ease;
+        }
+
+        .record-zone.recording {
+            border-color: var(--primary-orange);
+            animation: pulse-border 2s infinite;
+        }
+
+        .record-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 40px;
+            border: none;
+            background-color: var(--primary-orange);
+            color: white;
+            font-size: 1.4rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 102, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .record-btn.recording {
+            background-color: var(--danger-red);
+            animation: pulse-btn 1.5s infinite;
+        }
+
         .mic-icon { font-size: 3rem; }
-        .status-text { font-size: 1.2rem; font-weight: 500; color: var(--light-orange); text-align: center; }
-        .live-preview { width: 100%; min-height: 60px; background-color: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; font-size: 1.1rem; border-left: 4px solid var(--primary-orange); display: none; }
-        .history-zone { display: flex; flex-direction: column; gap: 15px; }
-        .history-zone h2 { font-size: 1.3rem; color: var(--light-orange); border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .entry-card { background-color: var(--surface-color); border-radius: 15px; padding: 20px; border-left: 5px solid var(--primary-orange); display: flex; flex-direction: column; gap: 15px; }
-        .entry-header { display: flex; justify-content: space-between; align-items: center; }
-        .entry-date { font-weight: bold; color: var(--light-orange); font-size: 1.1rem; }
-        .actions { display: flex; gap: 10px; }
-        .btn-small { background-color: transparent; border: 1px solid var(--primary-orange); color: var(--primary-orange); padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
-        .btn-small.delete { border-color: var(--danger-red); color: var(--danger-red); }
-        .entry-content { font-size: 1.1rem; line-height: 1.6; white-space: pre-wrap; }
-        .no-entries { text-align: center; color: var(--text-muted); padding: 20px; font-style: italic; }
-        @keyframes pulse-btn { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
-        @keyframes pulse-border { 0% { box-shadow: 0 0 15px rgba(255,102,0,0.2); } 50% { box-shadow: 0 0 30px rgba(255,102,0,0.5); background-color: #1a0f07; } 100% { box-shadow: 0 0 15px rgba(255,102,0,0.2); } }
+
+        .status-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--light-orange);
+            text-align: center;
+        }
+
+        .live-preview {
+            width: 100%;
+            min-height: 60px;
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 1.1rem;
+            border-left: 4px solid var(--primary-orange);
+            display: none;
+        }
+
+        .history-zone {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .history-zone h2 {
+            font-size: 1.3rem;
+            color: var(--light-orange);
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .entry-card {
+            background-color: var(--surface-color);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid var(--primary-orange);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .entry-date {
+            font-weight: bold;
+            color: var(--light-orange);
+            font-size: 1.1rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            background-color: transparent;
+            border: 1px solid var(--primary-orange);
+            color: var(--primary-orange);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn-small.delete {
+            border-color: var(--danger-red);
+            color: var(--danger-red);
+        }
+
+        .entry-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .no-entries {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+            font-style: italic;
+        }
+
+        @keyframes pulse-btn {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 15px rgba(255, 102, 0, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(255, 102, 0, 0.5); background-color: #1a0f07; }
+            100% { box-shadow: 0 0 15px rgba(255, 102, 0, 0.2); }
+        }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <header><h1>Oranssi Äänipäiväkirja PRO v4</h1></header>
+        <header>
+            <h1>Oranssi Äänipäiväkirja PRO v3</h1>
+        </header>
+
         <div class="record-zone" id="recordZone">
             <button class="record-btn" id="recordBtn">
                 <span class="mic-icon" id="micIcon">🎙️</span>
                 <span id="btnText">Käynnistetään...</span>
             </button>
-            <div class="status-text" id="statusText">Valmistellaan...</div>
+            <div class="status-text" id="statusText">Valmistellaan sovellusta...</div>
             <div class="live-preview" id="livePreview"></div>
         </div>
+
         <div class="history-zone">
             <h2>Tallennetut päivät</h2>
             <div id="entriesContainer"></div>
@@ -59,20 +224,23 @@
     </div>
 
     <script>
-        const täytesanat = ["ööö", "öö", "ää", "niinku", "tuota", "totta", "silleen", "sit", "sitku"];
+        const täytesanat = ["ööö", "öö", "ää", "niinku", "tuota", "totta", "silleen", "sit", "sitku", "vai ninku"];
 
         function siivoaTeksti(teksti) {
             if (!teksti) return "";
-            let p = teksti;
-            täytesanat.forEach(s => {
-                const r = new RegExp(`(^|\\s)${s}(\\s|$)`, 'gi');
-                p = p.replace(r, ' ');
+            let puhdistettu = teksti;
+            täytesanat.forEach(sana => {
+                const regex = new RegExp(`(^|\\s)${sana}(\\s|$)`, 'gi');
+                puhdistettu = puhdistettu.replace(regex, ' ');
             });
-            p = p.replace(/\s+/g, ' ').trim();
-            if (p.length > 0) p = p.charAt(0).toUpperCase() + p.slice(1);
-            return p;
+            puhdistettu = puhdistettu.replace(/\s+/g, ' ').trim();
+            if (puhdistettu.length > 0) {
+                puhdistettu = puhdistettu.charAt(0).toUpperCase() + puhdistettu.slice(1);
+            }
+            return puhdistettu;
         }
 
+        // Oranssi välähdys äänikuittauksen sijaan — ei luuppia, ei katkaisua
         function väläytäRuutu() {
             document.body.classList.add('flash');
             setTimeout(() => document.body.classList.remove('flash'), 200);
@@ -81,7 +249,11 @@
         let wakeLock = null;
         async function pyydäWakeLock() {
             if ('wakeLock' in navigator) {
-                try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.warn(`WakeLock virhe: ${err.message}`);
+                }
             }
         }
 
@@ -96,11 +268,10 @@
         let isRecording = false;
         let lockRestart = false;
         let restartTimer = null;
-        let viimeisinTallennettu = ""; // Duplikaattisuodatin
 
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SR();
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'fi-FI';
@@ -117,53 +288,55 @@
             };
 
             recognition.onerror = (event) => {
+                console.error("Tunnistusvirhe:", event.error);
                 if (event.error === 'not-allowed') {
                     statusText.innerText = "Mikrofoni estetty. Anna lupa.";
                     lockRestart = true;
                 }
-                // no-speech ja muut virheet — jatketaan normaalisti
+                // Muut virheet (network, no-speech) — yritetään uudelleen
             };
 
             recognition.onend = () => {
                 if (isRecording && !lockRestart) {
-                    // Selkeä viive estää päällekkäiset instanssit
-                    clearTimeout(restartTimer);
+                    // Pidempi viive sallii tauot puheessa ennen uudelleenkäynnistystä
                     restartTimer = setTimeout(() => {
                         if (isRecording && !lockRestart) {
                             try { recognition.start(); } catch(e) {}
                         }
-                    }, 600);
+                    }, 1500); // 1.5 sekunnin tauko sallittu
                 } else if (!isRecording) {
                     stopRecordingUI();
                 }
             };
 
             recognition.onresult = (event) => {
-                clearTimeout(restartTimer);
+                // Jos tulos tulee, ollaan vielä aktiivisia — peruutetaan mahdollinen restart-timer
+                if (restartTimer) {
+                    clearTimeout(restartTimer);
+                    restartTimer = null;
+                }
 
-                let interim = '';
-                let final = '';
+                let interimTranscript = '';
+                let finalTranscript = '';
 
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
-                        final += event.results[i][0].transcript;
+                        finalTranscript += event.results[i][0].transcript;
                     } else {
-                        interim += event.results[i][0].transcript;
+                        interimTranscript += event.results[i][0].transcript;
                     }
                 }
 
-                if (interim) livePreview.innerText = interim;
+                if (interimTranscript) {
+                    livePreview.innerText = interimTranscript;
+                }
 
-                if (final.trim().length > 0) {
-                    const siivottu = siivoaTeksti(final);
-                    if (siivottu.length > 0) {
-                        // Duplikaattisuodatin: ei tallenneta jos sama teksti kuin edellinen
-                        if (siivottu !== viimeisinTallennettu) {
-                            viimeisinTallennettu = siivottu;
-                            tallennaMuistiin(siivottu);
-                            livePreview.innerText = "";
-                            väläytäRuutu();
-                        }
+                if (finalTranscript.trim().length > 0) {
+                    const siivottuOsa = siivoaTeksti(finalTranscript);
+                    if (siivottuOsa.length > 0) {
+                        tallennaMuistiin(siivottuOsa);
+                        livePreview.innerText = "";
+                        väläytäRuutu(); // Hiljainen visuaalinen kuittaus
                     }
                 }
             };
@@ -172,8 +345,11 @@
                 pyydäWakeLock();
                 statusText.innerText = "Käynnistetään automaattisesti...";
                 setTimeout(() => {
-                    try { isRecording = true; recognition.start(); } catch(e) {}
-                }, 1200);
+                    try {
+                        isRecording = true;
+                        recognition.start();
+                    } catch(e) {}
+                }, 1500);
             });
 
         } else {
@@ -181,7 +357,9 @@
             recordBtn.disabled = true;
         }
 
-        recordBtn.addEventListener('click', () => {
+        recordBtn.addEventListener('click', muutaTilaa);
+
+        function muutaTilaa() {
             if (!recognition) return;
             if (isRecording) {
                 isRecording = false;
@@ -194,7 +372,7 @@
                 pyydäWakeLock();
                 try { recognition.start(); } catch(e) {}
             }
-        });
+        }
 
         function stopRecordingUI() {
             recordBtn.classList.remove('recording');
@@ -206,28 +384,28 @@
             paivitaLista();
         }
 
-        function haePvm() {
+        function haeTämänPäivänPäivämäärä() {
             const d = new Date();
-            return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+            return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
         }
 
         function tallennaMuistiin(uusiTeksti) {
-            const pvm = haePvm();
-            let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-            if (kaikki[pvm]) {
-                kaikki[pvm] = kaikki[pvm].trim() + " " + uusiTeksti;
+            const pvm = haeTämänPäivänPäivämäärä();
+            let kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+            if (kaikkiMerkinnät[pvm]) {
+                kaikkiMerkinnät[pvm] = kaikkiMerkinnät[pvm].trim() + " " + uusiTeksti;
             } else {
-                kaikki[pvm] = uusiTeksti;
+                kaikkiMerkinnät[pvm] = uusiTeksti;
             }
-            localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
+            localStorage.setItem('aanipaivakirja', JSON.stringify(kaikkiMerkinnät));
             paivitaLista();
         }
 
         function poistaMerkintä(pvm) {
-            if (confirm(`Poistetaanko päivän ${pvm} merkintä?`)) {
-                let kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-                delete kaikki[pvm];
-                localStorage.setItem('aanipaivakirja', JSON.stringify(kaikki));
+            if (confirm(`Haluatko varmasti poistaa päivän ${pvm} merkinnän?`)) {
+                let kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+                delete kaikkiMerkinnät[pvm];
+                localStorage.setItem('aanipaivakirja', JSON.stringify(kaikkiMerkinnät));
                 paivitaLista();
             }
         }
@@ -235,14 +413,16 @@
         function paivitaLista() {
             const container = document.getElementById('entriesContainer');
             container.innerHTML = '';
-            const kaikki = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
-            const päivät = Object.keys(kaikki).reverse();
+            const kaikkiMerkinnät = JSON.parse(localStorage.getItem('aanipaivakirja')) || {};
+            const päivät = Object.keys(kaikkiMerkinnät).reverse();
+
             if (päivät.length === 0) {
                 container.innerHTML = '<div class="no-entries">Ei tallennettuja päiviä.</div>';
                 return;
             }
+
             päivät.forEach(pvm => {
-                const teksti = kaikki[pvm];
+                const teksti = kaikkiMerkinnät[pvm];
                 const card = document.createElement('div');
                 card.className = 'entry-card';
                 card.innerHTML = `
@@ -261,7 +441,8 @@
 
         function jaaTeksti(pvm, teksti) {
             if (navigator.share) {
-                navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti }).catch(e => {});
+                navigator.share({ title: `Päiväkirja ${pvm}`, text: teksti })
+                .catch(err => console.log(err));
             } else {
                 alert("Laite ei tue suoraan jakoa.");
             }
